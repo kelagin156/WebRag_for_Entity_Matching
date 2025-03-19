@@ -74,7 +74,7 @@ if __name__ == "__main__":
     file_path = "80pair\wdcproducts80cc20rnd100un_gs.json"
 
     matcher = WebRAGEntityMatcher(openai_api_key=API_key, travily_api_key=TRAVILY_key)    
-
+    #TODO add a way to save the results
     with open(file_path, "r", encoding="utf-8") as file:
         for line in file:
             record = json.loads(line)  # Load each JSON object separately
