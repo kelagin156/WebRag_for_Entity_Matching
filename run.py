@@ -41,23 +41,23 @@ def process_record(record):
 
     # Extract 'left' values (excluding ID)
     left_parts = [
-        str(record.get("brand_left", "")),
-        str(record.get("title_left", "")),
-        str(record.get("description_left", "")),
-        str(record.get("price_left", "")),
-        str(record.get("priceCurrency_left", ""))
+        str(record.get("brand_left")) if record.get("brand_left") is not None else "",
+        str(record.get("title_left")) if record.get("title_left") is not None else "",
+        str(record.get("description_left")) if record.get("description_left") is not None else "",
+        str(record.get("price_left")) if record.get("price_left") is not None else "",
+        str(record.get("priceCurrency_left")) if record.get("priceCurrency_left") is not None else ""
     ]
-    left_text = " ".join(left_parts)
+    left_text = " ".join(filter(None, left_parts))  # filter out empty strings
 
     # Extract 'right' values (excluding ID)
     right_parts = [
-        str(record.get("brand_right", "")),
-        str(record.get("title_right", "")),
-        str(record.get("description_right", "")),
-        str(record.get("price_right", "")),
-        str(record.get("priceCurrency_right", ""))
+        str(record.get("brand_right")) if record.get("brand_right") is not None else "",
+        str(record.get("title_right")) if record.get("title_right") is not None else "",
+        str(record.get("description_right")) if record.get("description_right") is not None else "",
+        str(record.get("price_right")) if record.get("price_right") is not None else "",
+        str(record.get("priceCurrency_right")) if record.get("priceCurrency_right") is not None else ""
     ]
-    right_text = " ".join(right_parts)
+    right_text = " ".join(filter(None, right_parts))  # filter out empty strings
 
     label = record.get("label", "")
 
@@ -71,7 +71,7 @@ def process_record(record):
 if __name__ == "__main__":
     API_key = "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"
     TRAVILY_key = "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"
-    file_path = "80pair\wdcproducts80cc20rnd100un_gs.json"
+    file_path = "final200datasets.json"
 
     matcher = WebRAGEntityMatcher(openai_api_key=API_key, travily_api_key=TRAVILY_key)    
     #TODO add a way to save the results
