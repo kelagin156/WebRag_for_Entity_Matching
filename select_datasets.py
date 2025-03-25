@@ -3,6 +3,7 @@ import json
 import pandas as pd
 import time
 from openai.error import APIError, Timeout, RateLimitError, ServiceUnavailableError
+from sklearn.metrics import f1_score
 
 # Due to the travily and chat gpt needing 
 
@@ -95,13 +96,13 @@ def test_llm_what_the_llm_knows():
     finally:
         # Save whatever has been collected so far
         df = pd.DataFrame(rows)
-        df.to_csv("results.csv", index=False, encoding="utf-8")
-        print(f"\n✅ Saved {len(df)} results to results.csv (partial or full)")
+        df.to_csv("dataset_selection_results.csv", index=False, encoding="utf-8")
+        print(f"\n✅ Saved {len(df)} results to dataset_selection_results.csv (partial or full)")
         print(f"the las item was {i}")
 
 def select_dataset():
     # Read the CSV
-    df = pd.read_csv("results.csv")
+    df = pd.read_csv("dataset_selection_results.csv")
     # Select 100 rows with Match == 0
     match_0_indices = df[df["Match"] == 0].head(100).index.tolist()
     # Select 100 rows with Match == 1
@@ -128,9 +129,14 @@ def select_dataset():
         json.dump(selected_jsons, outfile, indent=4)  # Pretty-print JSON
 
 
-
-
-
 if __name__ == "__main__":
-    test_llm_what_the_llm_knows()
-    select_dataset()
+    #test_llm_what_the_llm_knows()
+    #select_dataset()
+    df = pd.read_csv("dataset_selection_results.csv")
+    df["Answer_binary"] = df["Answer"].apply(lambda x: 1 if "Yes" in str(x) else 0)
+    f1 = f1_score(df["Label"], df["Answer_binary"])
+    print(f1)
+
+    count_non_matcn = (df["Match"] == 0).sum()
+    print(count_non_matcn)
+        
