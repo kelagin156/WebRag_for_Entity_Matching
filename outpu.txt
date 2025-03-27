@@ -1,0 +1,7 @@
+Baseline F1 score:  0.08333333333333333
+WebRag F1 Score:  0.3815028901734104
+GPT was correct: 246
+Webrag was correct: 293
+Webrag help with right labeling: 54
+Webrag destroyed right labeling: 7
+

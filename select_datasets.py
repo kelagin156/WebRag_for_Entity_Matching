@@ -14,20 +14,20 @@ def process_record(record):
     # Extract 'left' values (excluding ID)
     left_parts = [
         "Brand: "+ str(record.get("brand_left")) if record.get("brand_left") is not None else "" ,
-        " Title: "+str(record.get("title_left")) if record.get("title_left") is not None else "" ,
-        " Price: "+str(record.get("price_left")) if record.get("price_left") is not None else "",
+        "Title: "+str(record.get("title_left")) if record.get("title_left") is not None else "" ,
+        "Price: "+str(record.get("price_left")) if record.get("price_left") is not None else "",
         str(record.get("priceCurrency_left")) if record.get("priceCurrency_left") is not None else "",
-        " Description: " + str(record.get("description_left")) if record.get("description_left") is not None else ""
+        "Description: " + str(record.get("description_left")) if record.get("description_left") is not None else ""
     ]
     left_text = " ".join(filter(None, left_parts))  # filter out empty strings
 
     # Extract 'right' values (excluding ID)
     right_parts = [
         "Brand: "+ str(record.get("brand_right")) if record.get("brand_right") is not None else "",
-        " Title: "+str(record.get("title_right")) if record.get("title_right") is not None else "",
-        " Price: "+str(record.get("price_right")) if record.get("price_right") is not None else "",
+        "Title: "+str(record.get("title_right")) if record.get("title_right") is not None else "",
+        "Price: "+str(record.get("price_right")) if record.get("price_right") is not None else "",
         str(record.get("priceCurrency_right")) if record.get("priceCurrency_right") is not None else "",
-        " Description: " +str(record.get("description_right")) if record.get("description_right") is not None else "" 
+        "Description: " +str(record.get("description_right")) if record.get("description_right") is not None else "" 
     ]
     right_text = " ".join(filter(None, right_parts))  # filter out empty strings
 
@@ -155,22 +155,7 @@ def print_f1():
     print(count_non_matcn)
 
 if __name__ == "__main__":
-    #test_llm_what_the_llm_knows()
-    #select_dataset()
-    #print_f1()
-
-    
-    df_all = pd.read_csv("entity_matching_results_400.csv")
-    print(df_all["y_true"], df_all["ChatGPT40-mini_baseline_y_pred"])
-    print(df_all["y_true"].value_counts())
-    print(df_all["ChatGPT40-mini_baseline_y_pred"].value_counts())
-    baseline_f1 = f1_score(df_all["y_true"], df_all["ChatGPT40-mini_baseline_y_pred"])
-    webrag_f1 = f1_score(df_all["y_true"], df_all["WebRag_y_pred"])
-
-    print("Baseline F1 score: ", baseline_f1)
-    print("WebRag F1 Score: ", webrag_f1)
-
-    df_f1 = pd.DataFrame([{"Date-Time": datetime.now(), "Baseline_F1": baseline_f1, "WebRag_F1": webrag_f1}])
-    df_f1.to_csv("f1_results.csv", index=False, encoding="utf-8", mode="a", header=not pd.io.common.file_exists("f1_results.csv"))
-
+    test_llm_what_the_llm_knows()
+    select_dataset()
+    print_f1()
         

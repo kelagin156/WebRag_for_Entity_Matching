@@ -18,13 +18,15 @@ class WebRAGEntityMatcher:
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}]
         )
+        with open("gpt.txt", "a", encoding="utf-8") as file:
+            file.write(str(prompt) + "\n" + str(response["choices"][0]["message"]["content"].strip()) + "\n\n")
         return response["choices"][0]["message"]["content"].strip(), 
 
     def search_with_travily(self, title):
         tavily_client = TavilyClient(api_key=self.travily_api_key)
         prompt = f"Give me more information on this product: {title}"
         response = tavily_client.search(prompt) # due to travilies max of 400 tokens
-        with open("travily.txt", "w", encoding="utf-8") as file:
+        with open("travily.txt", "a", encoding="utf-8") as file:
             file.write(str(prompt) + "\n" + str(response) + "\n\n")
         return response
 
@@ -50,20 +52,20 @@ def process_record(record):
     # Extract 'left' values (excluding ID)
     left_parts = [
         "Brand: "+ str(record.get("brand_left")) if record.get("brand_left") is not None else "" ,
-        " Title: "+str(record.get("title_left")) if record.get("title_left") is not None else "" ,
-        " Price: "+str(record.get("price_left")) if record.get("price_left") is not None else "",
+        "Title: "+str(record.get("title_left")) if record.get("title_left") is not None else "" ,
+        "Price: "+str(record.get("price_left")) if record.get("price_left") is not None else "",
         str(record.get("priceCurrency_left")) if record.get("priceCurrency_left") is not None else "",
-        " Description: " + str(record.get("description_left")) if record.get("description_left") is not None else ""
+        "Description: " + str(record.get("description_left")) if record.get("description_left") is not None else ""
     ]
     left_text = " ".join(filter(None, left_parts))  # filter out empty strings
 
     # Extract 'right' values (excluding ID)
     right_parts = [
         "Brand: "+ str(record.get("brand_right")) if record.get("brand_right") is not None else "",
-        " Title: "+str(record.get("title_right")) if record.get("title_right") is not None else "",
-        " Price: "+str(record.get("price_right")) if record.get("price_right") is not None else "",
+        "Title: "+str(record.get("title_right")) if record.get("title_right") is not None else "",
+        "Price: "+str(record.get("price_right")) if record.get("price_right") is not None else "",
         str(record.get("priceCurrency_right")) if record.get("priceCurrency_right") is not None else "",
-        " Description: " +str(record.get("description_right")) if record.get("description_right") is not None else "" 
+        "Description: " +str(record.get("description_right")) if record.get("description_right") is not None else "" 
     ]
     right_text = " ".join(filter(None, right_parts))  # filter out empty strings
 
@@ -91,23 +93,25 @@ if __name__ == "__main__":
         data = json.load(file)
         try:
             for i, record in enumerate(data):
-                if i >= 43: # in case the code fails the number can be adjusted to the last i
+                if i >= 0: # in case the code fails the number can be adjusted to the last i
                     entity_1, entity_2, label, title1, title2 = process_record(record)  # Process data
 
                     # Zero-shot entity matching
                     baseline_result = matcher.llm_entity_match(entity_1, entity_2)
-                    chatGPT40_mini_baseline_y_pred = int("Yes" in baseline_result)
+                    chatGPT40_mini_baseline_y_pred = int("Yes" in str(baseline_result))
                     print(f"Index: {i}   Baseline Result: {baseline_result, chatGPT40_mini_baseline_y_pred}", "Actual Label: ", label)
                     
                     
                     # WebRAG-enhanced entity matching
                     enhanced_result = matcher.enhanced_entity_match(entity_1, entity_2, title1, title2)
-                    webRag_y_pred = int("Yes" in enhanced_result)
+                    webRag_y_pred = int("Yes" in str(enhanced_result))
                     print(f"Index: {i}   WebRAG-Enhanced Result: {enhanced_result, webRag_y_pred}", "Actual Label: ", label)
                     
                     rows.append({
-                                "Entity1": entity_1,
-                                "Entity2": entity_2,
+                                "Entity1": str(entity_1),
+                                "Entity2": str(entity_2),
+                                "GPT_only_response": str(baseline_result),
+                                "GPT_Travily_response": str(enhanced_result),
                                 "y_true": label,
                                 "ChatGPT40-mini_baseline_y_pred": chatGPT40_mini_baseline_y_pred,
                                 "WebRag_y_pred": webRag_y_pred,
