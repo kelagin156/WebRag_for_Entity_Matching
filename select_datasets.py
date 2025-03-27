@@ -4,6 +4,7 @@ import pandas as pd
 import time
 from openai.error import APIError, Timeout, RateLimitError, ServiceUnavailableError
 from sklearn.metrics import f1_score
+from datetime import datetime
 
 # Due to the travily and chat gpt needing 
 
@@ -12,24 +13,23 @@ def process_record(record):
 
     # Extract 'left' values (excluding ID)
     left_parts = [
-        str(record.get("brand_left")) if record.get("brand_left") is not None else "",
-        str(record.get("title_left")) if record.get("title_left") is not None else "",
-        str(record.get("description_left")) if record.get("description_left") is not None else "",
-        str(record.get("price_left")) if record.get("price_left") is not None else "",
-        str(record.get("priceCurrency_left")) if record.get("priceCurrency_left") is not None else ""
+        "Brand: "+ str(record.get("brand_left")) if record.get("brand_left") is not None else "" ,
+        " Title: "+str(record.get("title_left")) if record.get("title_left") is not None else "" ,
+        " Price: "+str(record.get("price_left")) if record.get("price_left") is not None else "",
+        str(record.get("priceCurrency_left")) if record.get("priceCurrency_left") is not None else "",
+        " Description: " + str(record.get("description_left")) if record.get("description_left") is not None else ""
     ]
     left_text = " ".join(filter(None, left_parts))  # filter out empty strings
 
     # Extract 'right' values (excluding ID)
     right_parts = [
-        str(record.get("brand_right")) if record.get("brand_right") is not None else "",
-        str(record.get("title_right")) if record.get("title_right") is not None else "",
-        str(record.get("description_right")) if record.get("description_right") is not None else "",
-        str(record.get("price_right")) if record.get("price_right") is not None else "",
-        str(record.get("priceCurrency_right")) if record.get("priceCurrency_right") is not None else ""
+        "Brand: "+ str(record.get("brand_right")) if record.get("brand_right") is not None else "",
+        " Title: "+str(record.get("title_right")) if record.get("title_right") is not None else "",
+        " Price: "+str(record.get("price_right")) if record.get("price_right") is not None else "",
+        str(record.get("priceCurrency_right")) if record.get("priceCurrency_right") is not None else "",
+        " Description: " +str(record.get("description_right")) if record.get("description_right") is not None else "" 
     ]
     right_text = " ".join(filter(None, right_parts))  # filter out empty strings
-
 
     label = record.get("label", "")
 
@@ -41,7 +41,7 @@ def process_record(record):
 
 def llm_entity_match(openai_api_key, entity_1, entity_2):
     openai.api_key = openai_api_key
-    prompt = f"Do these two entities refer to the same real-world object? Entity 1: {entity_1}, Entity 2: {entity_2}. Respond with only 'Yes' or 'No' and give me the percentage of how certain you are about your response only."
+    prompt = f"Do these two entities refer to the same real-world object? Entity 1: [{entity_1}], Entity 2: [{entity_2}]. Respond only with 'Yes' or 'No' and the percentage of how certain you are about your answer. No more information"
     response = openai.ChatCompletion.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
@@ -68,7 +68,7 @@ def test_llm_what_the_llm_knows():
     try:
         with open(file_path, "r", encoding="utf-8") as file:
             for i,line in enumerate(file):
-                if i >= 0: # in case the code fails the number can be adjusted to the last i
+                if i >= 601: # in case the code fails the number can be adjusted to the last i
                     record = json.loads(line)  # Load each JSON object separately
                     entity_1, entity_2, label = process_record(record)  # Process data
                     
@@ -96,23 +96,40 @@ def test_llm_what_the_llm_knows():
     finally:
         # Save whatever has been collected so far
         df = pd.DataFrame(rows)
-        df.to_csv("dataset_selection_results.csv", index=False, encoding="utf-8")
+        df.to_csv("dataset_selection_results.csv", index=False, encoding="utf-8",  mode="a", header=not pd.io.common.file_exists("dataset_selection_results.csv"))
         print(f"\n✅ Saved {len(df)} results to dataset_selection_results.csv (partial or full)")
         print(f"the las item was {i}")
+        print((df["Match"] == 0).sum())
 
 def select_dataset():
     # Read the CSV
     df = pd.read_csv("dataset_selection_results.csv")
-    # Select 100 rows with Match == 0
-    match_0_indices = df[df["Match"] == 0].head(100).index.tolist()
-    # Select 100 rows with Match == 1
-    match_1_indices = df[df["Match"] == 1].head(100).index.tolist()
+    # Randomly select 168 indices where Match == 0
+    match_0_df = df[df["Match"] == 0].sample(n=168, random_state=42)
+    match_0_indices = match_0_df.index.tolist()
+
+    # Count labels in Match == 0
+    label_0_count = (match_0_df["Label"] == 0).sum()
+    label_1_count = (match_0_df["Label"] == 1).sum()
+
+    # Calculate how many more we need from Match == 1
+    total_needed_label_0 = int(0.82 * 400)  # 88% of 500 = 440
+    total_needed_label_1 = int(0.18 * 400)  # 12% of 500 = 60
+
+    needed_label_0_from_match_1 = total_needed_label_0 - label_0_count
+    needed_label_1_from_match_1 = total_needed_label_1 - label_1_count
+
+    print(needed_label_0_from_match_1,needed_label_1_from_match_1 )
+    # Get Match == 1 indices
+    match_1_df = df[df["Match"] == 1]
+    match_1_label_0_indices = match_1_df[match_1_df["Label"] == 0].sample(n=needed_label_0_from_match_1, random_state=42).index.tolist()
+    match_1_label_1_indices = match_1_df[match_1_df["Label"] == 1].sample(n=needed_label_1_from_match_1, random_state=42).index.tolist()
+
     # Combine selected indices
-    selected_indices = set(match_0_indices + match_1_indices)
-    print(selected_indices)
+    selected_indices = set(match_0_indices + match_1_label_0_indices + match_1_label_1_indices)
 
     input_json_file = "80pair\wdcproducts80cc20rnd100un_gs.json"
-    output_json_file = "final200datasets.json"
+    output_json_file = "final400datasets.json"
 
     # Collect matching JSON objects
     selected_jsons = []
@@ -128,10 +145,7 @@ def select_dataset():
     with open(output_json_file, "w", encoding="utf-8") as outfile:
         json.dump(selected_jsons, outfile, indent=4)  # Pretty-print JSON
 
-
-if __name__ == "__main__":
-    #test_llm_what_the_llm_knows()
-    #select_dataset()
+def print_f1():
     df = pd.read_csv("dataset_selection_results.csv")
     df["Answer_binary"] = df["Answer"].apply(lambda x: 1 if "Yes" in str(x) else 0)
     f1 = f1_score(df["Label"], df["Answer_binary"])
@@ -139,4 +153,24 @@ if __name__ == "__main__":
 
     count_non_matcn = (df["Match"] == 0).sum()
     print(count_non_matcn)
+
+if __name__ == "__main__":
+    #test_llm_what_the_llm_knows()
+    #select_dataset()
+    #print_f1()
+
+    
+    df_all = pd.read_csv("entity_matching_results_400.csv")
+    print(df_all["y_true"], df_all["ChatGPT40-mini_baseline_y_pred"])
+    print(df_all["y_true"].value_counts())
+    print(df_all["ChatGPT40-mini_baseline_y_pred"].value_counts())
+    baseline_f1 = f1_score(df_all["y_true"], df_all["ChatGPT40-mini_baseline_y_pred"])
+    webrag_f1 = f1_score(df_all["y_true"], df_all["WebRag_y_pred"])
+
+    print("Baseline F1 score: ", baseline_f1)
+    print("WebRag F1 Score: ", webrag_f1)
+
+    df_f1 = pd.DataFrame([{"Date-Time": datetime.now(), "Baseline_F1": baseline_f1, "WebRag_F1": webrag_f1}])
+    df_f1.to_csv("f1_results.csv", index=False, encoding="utf-8", mode="a", header=not pd.io.common.file_exists("f1_results.csv"))
+
         

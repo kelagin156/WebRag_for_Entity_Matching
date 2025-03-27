@@ -13,24 +13,25 @@ class WebRAGEntityMatcher:
     
     def llm_entity_match(self, entity_1, entity_2):
         openai.api_key = self.openai_api_key
-        prompt = f"Do these two entities refer to the same real-world object? Entity 1: {entity_1}, Entity 2: {entity_2}. Respond only with 'Yes' or 'No' and the percentage of how certain you are about your answer. No more information"
+        prompt = f"Do these two entities refer to the same real-world object? Entity 1: [{entity_1}], Entity 2: [{entity_2}]. Respond only with 'Yes' or 'No' and the percentage of how certain you are about your answer. No more information"
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}]
         )
-        return response["choices"][0]["message"]["content"].strip()
-    
+        return response["choices"][0]["message"]["content"].strip(), 
 
-    def search_with_travily(self, entity):
+    def search_with_travily(self, title):
         tavily_client = TavilyClient(api_key=self.travily_api_key)
-        prompt = f"Need more info on specific product: {entity}"
-        response = tavily_client.search(prompt[:400]) # due to travilies max of 400 tokens
+        prompt = f"Give me more information on this product: {title}"
+        response = tavily_client.search(prompt) # due to travilies max of 400 tokens
+        with open("travily.txt", "w", encoding="utf-8") as file:
+            file.write(str(prompt) + "\n" + str(response) + "\n\n")
         return response
 
-    def enhanced_entity_match(self, entity_1, entity_2):
+    def enhanced_entity_match(self, entity_1, entity_2, title1, title2):
         """WebRAG-enhanced entity matching."""
-        info_1 = self.search_with_travily(entity_1)
-        info_2 = self.search_with_travily(entity_2)
+        info_1 = self.search_with_travily(title1)
+        info_2 = self.search_with_travily(title2)
         
         context_1 = info_1["results"][0]["content"] if info_1 else "No additional info."
         context_1 = context_1 + " " + info_1["results"][0]["url"] if info_1 else ""
@@ -39,7 +40,6 @@ class WebRAGEntityMatcher:
         
         webrag_entity_1 = entity_1 + "Additional info: " + context_1
         webrag_entity_2 = entity_2 + "Additional info: " + context_2
-        # print(context_1, "\n\n", context_2)
 
         return self.llm_entity_match(webrag_entity_1, webrag_entity_2)
 
@@ -51,9 +51,9 @@ def process_record(record):
     left_parts = [
         "Brand: "+ str(record.get("brand_left")) if record.get("brand_left") is not None else "" ,
         " Title: "+str(record.get("title_left")) if record.get("title_left") is not None else "" ,
-        " Description: " + str(record.get("description_left")) if record.get("description_left") is not None else "",
         " Price: "+str(record.get("price_left")) if record.get("price_left") is not None else "",
-        str(record.get("priceCurrency_left")) if record.get("priceCurrency_left") is not None else ""
+        str(record.get("priceCurrency_left")) if record.get("priceCurrency_left") is not None else "",
+        " Description: " + str(record.get("description_left")) if record.get("description_left") is not None else ""
     ]
     left_text = " ".join(filter(None, left_parts))  # filter out empty strings
 
@@ -61,9 +61,9 @@ def process_record(record):
     right_parts = [
         "Brand: "+ str(record.get("brand_right")) if record.get("brand_right") is not None else "",
         " Title: "+str(record.get("title_right")) if record.get("title_right") is not None else "",
-        " Description: " +str(record.get("description_right")) if record.get("description_right") is not None else "" ,
         " Price: "+str(record.get("price_right")) if record.get("price_right") is not None else "",
-        str(record.get("priceCurrency_right")) if record.get("priceCurrency_right") is not None else ""
+        str(record.get("priceCurrency_right")) if record.get("priceCurrency_right") is not None else "",
+        " Description: " +str(record.get("description_right")) if record.get("description_right") is not None else "" 
     ]
     right_text = " ".join(filter(None, right_parts))  # filter out empty strings
 
@@ -73,15 +73,16 @@ def process_record(record):
     left_text = left_text.replace("/", " ")  # Replace slashes with spaces
     right_text = right_text.replace("/", " ")  # Replace slashes with spaces
 
-    return left_text, right_text, label
+    left_title = str(record.get("title_left")).replace("/", " ")
+    right_title = str(record.get("title_right")).replace("/", " ")
 
-
+    return left_text, right_text, label, left_title, right_title
 
 # Example usage
 if __name__ == "__main__":
     API_key = "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"
     TRAVILY_key = "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"
-    file_path = "final200datasets.json"
+    file_path = "final400datasets.json"
     matcher = WebRAGEntityMatcher(openai_api_key=API_key, travily_api_key=TRAVILY_key)    
 
     rows = []
@@ -90,8 +91,8 @@ if __name__ == "__main__":
         data = json.load(file)
         try:
             for i, record in enumerate(data):
-                if i <= 2: # in case the code fails the number can be adjusted to the last i
-                    entity_1, entity_2, label = process_record(record)  # Process data
+                if i >= 43: # in case the code fails the number can be adjusted to the last i
+                    entity_1, entity_2, label, title1, title2 = process_record(record)  # Process data
 
                     # Zero-shot entity matching
                     baseline_result = matcher.llm_entity_match(entity_1, entity_2)
@@ -100,7 +101,7 @@ if __name__ == "__main__":
                     
                     
                     # WebRAG-enhanced entity matching
-                    enhanced_result = matcher.enhanced_entity_match(entity_1, entity_2)
+                    enhanced_result = matcher.enhanced_entity_match(entity_1, entity_2, title1, title2)
                     webRag_y_pred = int("Yes" in enhanced_result)
                     print(f"Index: {i}   WebRAG-Enhanced Result: {enhanced_result, webRag_y_pred}", "Actual Label: ", label)
                     
@@ -117,16 +118,16 @@ if __name__ == "__main__":
         finally:
             # Save whatever has been collected so far
             df = pd.DataFrame(rows)
-            df.to_csv("entity_matching_results.csv", index=False, encoding="utf-8")
-            print(f"\n✅ Saved {len(df)} results to entity_matching_results.csv (partial or full)")
+            df.to_csv("entity_matching_results_400.csv", index=False, encoding="utf-8",  mode="a", header=not pd.io.common.file_exists("entity_matching_results_400.csv"))
+            print(f"\n✅ Saved {len(df)} results to entity_matching_results_400.csv (partial or full)")
             print(f"the las item was {i}")
             
-            baseline_f1 = f1_score( df["y_true"], df["ChatGPT40-mini_baseline_y_pred"])
-            webrag_f1 = f1_score( df["y_true"], df["WebRag_y_pred"])
+            df_all = pd.read_csv("entity_matching_results_400.csv")
+            baseline_f1 = f1_score(df_all["y_true"], df_all["ChatGPT40-mini_baseline_y_pred"])
+            webrag_f1 = f1_score(df_all["y_true"], df_all["WebRag_y_pred"])
 
             print("Baseline F1 score: ", baseline_f1)
             print("WebRag F1 Score: ", webrag_f1)
 
-            df_f1 = pd.DataFrame([{"Date-Time": datetime.now(), "Baseline_F1": baseline_f1, "WeRag_F1": webrag_f1}])
+            df_f1 = pd.DataFrame([{"Date-Time": datetime.now(), "Baseline_F1": baseline_f1, "WebRag_F1": webrag_f1}])
             df_f1.to_csv("f1_results.csv", index=False, encoding="utf-8", mode="a", header=not pd.io.common.file_exists("f1_results.csv"))
-                
