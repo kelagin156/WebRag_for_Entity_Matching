@@ -22,10 +22,10 @@ class WebRAGEntityMatcher:
             file.write(str(prompt) + "\n" + str(response["choices"][0]["message"]["content"].strip()) + "\n\n")
         return response["choices"][0]["message"]["content"].strip(), 
 
-    def search_with_travily(self, title):
+    def search_with_travily(self, title, mex_results):
         tavily_client = TavilyClient(api_key=self.travily_api_key)
-        prompt = f"Give me more information on this product: {title}"
-        response = tavily_client.search(prompt) # due to travilies max of 400 tokens
+        prompt = f"{title}"
+        response = tavily_client.search(query = prompt, mex_results = mex_results) # due to travilies max of 400 tokens
         with open("travily.txt", "a", encoding="utf-8") as file:
             file.write(str(prompt) + "\n" + str(response) + "\n\n")
         return response
