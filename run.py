@@ -4,46 +4,98 @@ import json
 from sklearn.metrics import f1_score
 import pandas as pd
 from datetime import datetime
+import tiktoken
 
+def count_tokens(text, model="gpt-4o"):
+        encoding = tiktoken.encoding_for_model(model)
+        return len(encoding.encode(text))
 
 class WebRAGEntityMatcher:
     def __init__(self, openai_api_key, travily_api_key):
         self.openai_api_key = openai_api_key
         self.travily_api_key = travily_api_key
-    
+
     def llm_entity_match(self, entity_1, entity_2):
         openai.api_key = self.openai_api_key
         prompt = f"Do these two entities refer to the same real-world object? Entity 1: [{entity_1}], Entity 2: [{entity_2}]. Respond only with 'Yes' or 'No' and the percentage of how certain you are about your answer. No more information"
+        
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}]
         )
+
+        content = response["choices"][0]["message"]["content"].strip()
+        usage = response.get("usage", {})
+        input_tokens = usage.get("prompt_tokens", 0)
+        output_tokens = usage.get("completion_tokens", 0)
+
         with open("gpt.txt", "a", encoding="utf-8") as file:
-            file.write(str(prompt) + "\n" + str(response["choices"][0]["message"]["content"].strip()) + "\n\n")
-        return response["choices"][0]["message"]["content"].strip(), 
+            file.write(str(prompt) + "\n" + str(content) + "\n\n")
+
+        return content, response, prompt, input_tokens, output_tokens
 
     def search_with_travily(self, title, mex_results):
         tavily_client = TavilyClient(api_key=self.travily_api_key)
-        prompt = f"{title}"
-        response = tavily_client.search(query = prompt, mex_results = mex_results) # due to travilies max of 400 tokens
+
+        # Input: your query string
+        query_input_tokens = count_tokens(title)
+
+        response = tavily_client.search(query=title, max_results=mex_results)
+
+        # Output: their returned content (flattened)
+        context_text = " ".join(
+            f"{res.get('title', '')} {res.get('content', '')} {res.get('url', '')}".strip()
+            for res in response.get("results", [])
+        )
+        response_output_tokens = count_tokens(context_text)
+
         with open("travily.txt", "a", encoding="utf-8") as file:
-            file.write(str(prompt) + "\n" + str(response) + "\n\n")
-        return response
+                file.write(str(title) + "\n" + str(response) +"\n\n")
 
-    def enhanced_entity_match(self, entity_1, entity_2, title1, title2):
-        """WebRAG-enhanced entity matching."""
-        info_1 = self.search_with_travily(title1)
-        info_2 = self.search_with_travily(title2)
-        
-        context_1 = info_1["results"][0]["content"] if info_1 else "No additional info."
-        context_1 = context_1 + " " + info_1["results"][0]["url"] if info_1 else ""
-        context_2 = info_2["results"][0]["content"] if info_2 else "No additional info."
-        context_2 = context_2 + " " + info_2["results"][0]["url"] if info_2 else ""
-        
-        webrag_entity_1 = entity_1 + "Additional info: " + context_1
-        webrag_entity_2 = entity_2 + "Additional info: " + context_2
+        return {
+            "results": response.get("results", []),
+            "input_tokens": query_input_tokens,
+            "output_tokens": response_output_tokens
+        }
 
-        return self.llm_entity_match(webrag_entity_1, webrag_entity_2)
+
+    def webRag_entity_match(self, entity_1, entity_2, title1, title2):
+        webrag_results = {}
+
+        for n in [1, 3, 5]:
+            info_1 = self.search_with_travily(title1, n)
+            info_2 = self.search_with_travily(title2, n)
+
+            travily_input_tokens = info_1["input_tokens"] + info_2["input_tokens"]
+            travily_output_tokens = info_1["output_tokens"] + info_2["output_tokens"]
+
+            def build_context(info):
+                return " ".join(
+                    f"{res.get('title', '')} {res.get('content', '')} {res.get('url', '')}".strip()
+                    for res in info.get("results", [])
+                )
+
+            context_1 = build_context(info_1)
+            context_2 = build_context(info_2)
+
+            enriched_entity_1 = f"{entity_1} Additional info: {context_1}"
+            enriched_entity_2 = f"{entity_2} Additional info: {context_2}"
+
+            content, response, prompt, input_tokens, output_tokens = self.llm_entity_match(enriched_entity_1, enriched_entity_2)
+
+            webrag_results[n] = {
+                "response": content,
+                "prompt": prompt,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "prediction": int("yes" in content.lower()),
+                "travily_input_tokens": travily_input_tokens,
+                "travily_output_tokens": travily_output_tokens
+            }
+            
+
+        return webrag_results
+
 
 # Define a function to process each record
 def process_record(record):
@@ -94,28 +146,54 @@ if __name__ == "__main__":
         try:
             for i, record in enumerate(data):
                 if i >= 0: # in case the code fails the number can be adjusted to the last i
-                    entity_1, entity_2, label, title1, title2 = process_record(record)  # Process data
+                    entity_1, entity_2, label, title1, title2 = process_record(record)
 
-                    # Zero-shot entity matching
-                    baseline_result = matcher.llm_entity_match(entity_1, entity_2)
-                    chatGPT40_mini_baseline_y_pred = int("Yes" in str(baseline_result))
-                    print(f"Index: {i}   Baseline Result: {baseline_result, chatGPT40_mini_baseline_y_pred}", "Actual Label: ", label)
-                    
-                    
-                    # WebRAG-enhanced entity matching
-                    enhanced_result = matcher.enhanced_entity_match(entity_1, entity_2, title1, title2)
-                    webRag_y_pred = int("Yes" in str(enhanced_result))
-                    print(f"Index: {i}   WebRAG-Enhanced Result: {enhanced_result, webRag_y_pred}", "Actual Label: ", label)
-                    
+                    baseline_result, base_response, base_prompt, base_in_tokens, base_out_tokens = matcher.llm_entity_match(entity_1, entity_2)
+                    baseline_pred = int("Yes" in baseline_result)
+                    print(f"[{i}] Baseline:", baseline_result, "| Label:", label)
+
+                    webrag_results = matcher.webRag_entity_match(entity_1, entity_2, title1, title2)
+                    print(f"[{i}] WebRag1:", webrag_results[1]["prediction"], "| Label:", label)
+                    print(f"[{i}] WebRag3:", webrag_results[3]["prediction"], "| Label:", label)
+                    print(f"[{i}] WebRag5:", webrag_results[5]["prediction"], "| Label:", label)
+
                     rows.append({
-                                "Entity1": str(entity_1),
-                                "Entity2": str(entity_2),
-                                "GPT_only_response": str(baseline_result),
-                                "GPT_Travily_response": str(enhanced_result),
-                                "y_true": label,
-                                "ChatGPT40-mini_baseline_y_pred": chatGPT40_mini_baseline_y_pred,
-                                "WebRag_y_pred": webRag_y_pred,
-                            })
+                        "Entity1": entity_1,
+                        "Entity2": entity_2,
+                        "y_true": label,
+                        "ChatGPT40-mini_baseline_y_pred": baseline_pred,
+
+                        "WebRag_y_pred_n1": webrag_results[1]["prediction"],
+                        "WebRag_y_pred_n3": webrag_results[3]["prediction"],
+                        "WebRag_y_pred_n5": webrag_results[5]["prediction"],
+
+                        "Baseline_Prompt": base_prompt,
+                        "Baseline_Response": baseline_result,
+                        "Baseline_Input_Tokens": base_in_tokens,
+                        "Baseline_Output_Tokens": base_out_tokens,
+
+                        "WebRAG_1_Prompt": webrag_results[1]["prompt"],
+                        "WebRAG_1_Response": webrag_results[1]["response"],
+                        "WebRAG_1_GPT_Input_Tokens": webrag_results[1]["input_tokens"],
+                        "WebRAG_1_GPT_Output_Tokens": webrag_results[1]["output_tokens"],
+                        "Travily_Input_Tokens_n1": webrag_results[1]["travily_input_tokens"],
+                        "Travily_Output_Tokens_n1": webrag_results[1]["travily_output_tokens"],
+
+                        "WebRAG_3_Prompt": webrag_results[3]["prompt"],
+                        "WebRAG_3_Response": webrag_results[3]["response"],
+                        "WebRAG_3_GPT_Input_Tokens": webrag_results[3]["input_tokens"],
+                        "WebRAG_3_GPT_Output_Tokens": webrag_results[3]["output_tokens"],
+                        "Travily_Input_Tokens_n3": webrag_results[3]["travily_input_tokens"],
+                        "Travily_Output_Tokens_n3": webrag_results[3]["travily_output_tokens"],
+
+                        "WebRAG_5_Prompt": webrag_results[5]["prompt"],
+                        "WebRAG_5_Response": webrag_results[5]["response"],
+                        "WebRAG_5_GPT_Input_Tokens": webrag_results[5]["input_tokens"],
+                        "WebRAG_5_GPT_Output_Tokens": webrag_results[5]["output_tokens"],
+                        "Travily_Input_Tokens_n5": webrag_results[5]["travily_input_tokens"],
+                        "Travily_Output_Tokens_n5": webrag_results[5]["travily_output_tokens"],
+                    })
+
         except Exception as e:
             print(f"\n❗ Script interrupted due to error:\n{e}\n")
 
@@ -127,11 +205,13 @@ if __name__ == "__main__":
             print(f"the las item was {i}")
             
             df_all = pd.read_csv("entity_matching_results_400.csv")
+            
             baseline_f1 = f1_score(df_all["y_true"], df_all["ChatGPT40-mini_baseline_y_pred"])
-            webrag_f1 = f1_score(df_all["y_true"], df_all["WebRag_y_pred"])
+            webrag_f1_n1 = f1_score(df_all["y_true"], df_all["WebRag_y_pred_n1"])
+            webrag_f1_n3 = f1_score(df_all["y_true"], df_all["WebRag_y_pred_n3"])
+            webrag_f1_n5 = f1_score(df_all["y_true"], df_all["WebRag_y_pred_n5"])
 
-            print("Baseline F1 score: ", baseline_f1)
-            print("WebRag F1 Score: ", webrag_f1)
-
-            df_f1 = pd.DataFrame([{"Date-Time": datetime.now(), "Baseline_F1": baseline_f1, "WebRag_F1": webrag_f1}])
-            df_f1.to_csv("f1_results.csv", index=False, encoding="utf-8", mode="a", header=not pd.io.common.file_exists("f1_results.csv"))
+            print("Baseline F1:", baseline_f1)
+            print("WebRAG F1 (n=1):", webrag_f1_n1)
+            print("WebRAG F1 (n=3):", webrag_f1_n3)
+            print("WebRAG F1 (n=5):", webrag_f1_n5)
