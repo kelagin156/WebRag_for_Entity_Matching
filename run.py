@@ -195,13 +195,13 @@ if __name__ == "__main__":
                     })
 
         except Exception as e:
-            print(f"\n❗ Script interrupted due to error:\n{e}\n")
+            print(f"\n Script interrupted due to error:\n{e}\n")
 
         finally:
             # Save whatever has been collected so far
             df = pd.DataFrame(rows)
             df.to_csv("entity_matching_results_400.csv", index=False, encoding="utf-8",  mode="a", header=not pd.io.common.file_exists("entity_matching_results_400.csv"))
-            print(f"\n✅ Saved {len(df)} results to entity_matching_results_400.csv (partial or full)")
+            print(f"\n Saved {len(df)} results to entity_matching_results_400.csv (partial or full)")
             print(f"the las item was {i}")
             
             df_all = pd.read_csv("entity_matching_results_400.csv")
