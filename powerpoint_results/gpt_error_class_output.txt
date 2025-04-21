@@ -1,0 +1,43 @@
+To systematically categorize the types of errors made by the product matching classification system in the given examples, we can define distinct error classes for both false negatives and false positives. Each class represents a general reason why the system failed to correctly classify product pairs. 
+
+### Error Classes for False Negatives
+
+1. **Title Mismatch**: 
+   - Products with similar core attributes (e.g., brand, type, function) but significant differences in titles that prevent correct matching. E.g., in Fa1, the pumps are structurally similar but have titled differently.
+
+2. **Brand Inconsistency**: 
+   - The classification fails when products are from the same brand but presented in different branding formats or differences in brand names, which confuse the algorithm. E.g., varying capitalization or abbreviations like "Fenix" vs. "FENIX" in Fa7.
+
+3. **Descriptive Overlap**: 
+   - Instances where products have similar descriptions and features but are categorized under different specifications that are not easily parsed by the algorithm. E.g., Fa3 where two different sunglasses have overlapping characteristics yet are conclusively identifiable by subtle features.
+
+4. **Misleading Attributes**: 
+   - When attributes like size, color, or additional features are not consistently recognized across the dataset. E.g., Fa6 with the two different types of tools where their names alone don't capture the product purpose effectively.
+
+5. **Market Variability**: 
+   - Variations in product specifications such as pricing, which may lead to misclassifications due to less relevance, as seen in Fa2 with kettle braais from different markets.
+
+6. **Similar Product Types**: 
+   - Products that fall under the same category but are different enough that the algorithm misses them, as in Fa4 and Fa11 where similar items are misclassified as non-matching.
+
+### Error Classes for False Positives
+
+1. **High Similarity with Distinct Variants**: 
+   - Products are very similar but one is a variant of the other, such as different colors or minor updates. E.g., Fa12 with the sunglasses where slight variations lead to incorrect matching.
+
+2. **Overlapping Features without Core Identity**: 
+   - Products that have overlapping descriptive features but serve different use cases or products altogether. For instance, in Fa23 with Tissot watches showing similarities but differing in their intended market usage.
+
+3. **Title Confusion**: 
+   - Instances where the titles lead the algorithm to detect a match when they are indeed two separate products with minor description differences but not the same product. E.g., Fa38 with the two models of the Tissot watches.
+
+4. **Ambiguity in Descriptions**: 
+   - When product descriptions are interpreted broadly, leading to false classifications despite subtle differences in models or specifications. Examples can be drawn from Fa27 with ammunition products having significant differences yet overlap in features.
+
+5. **Identifier or Code Conflicts**: 
+   - Different models might share identifiers or overlap in part numbers or catalog numbers, which leads the model to match them incorrectly as seen in Fa35 with the floor pumps that have different specifications denoting different products.
+
+6. **Misinterpretation of Attributes**: 
+   - Instances of misjudged attributes, like price leading to assumptions regarding similarity, evident in Fa2 with varying pricing suggesting a non-match despite being functionally similar.
+
+By grouping these errors into classes, we can better diagnose the underlying issues in the product matching classification system. This can ultimately help in improving the algorithm's accuracy and robustness by refining its matching logic based on these common pitfalls.

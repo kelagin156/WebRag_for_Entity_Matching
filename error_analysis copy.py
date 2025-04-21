@@ -152,32 +152,27 @@ if __name__ == "__main__":
     prompt += format_block("False Positives", false_positives)
 
     # Output to file for pasting into ChatGPT or Claude etc.
-    #with open("gpt_error_class_prompt.txt", "w", encoding="utf-8") as f:
-    #    f.write(prompt)
+    with open("gpt_error_class_prompt.txt", "w", encoding="utf-8") as f:
+        f.write(prompt)
 
-    #openai.api_key = "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"
-    #response = openai.ChatCompletion.create(
-    #    model="gpt-4.1-mini",  
-    #    messages=[{"role": "user", "content": prompt}]
-    #)
+    openai.api_key = "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"
+    response = openai.ChatCompletion.create(
+        model="gpt-4.1-mini",  
+        messages=[{"role": "user", "content": prompt}]
+    )
 
     # Output the GPT response
     print("\n--- GPT-Generated Error Classes ---\n")
-    #with open("gpt_error_class_output.txt", "w", encoding="utf-8") as f:
-    #    f.write(response["choices"][0]["message"]["content"])
-    #print(response["choices"][0]["message"]["content"])
-    ##delete this
-    with open("gpt_error_class_output.txt", "r", encoding="utf-8") as f:
-        error_classes = f.read()
-    ##
-    #error_classes = response["choices"][0]["message"]["content"]
+    with open("gpt_error_class_output.txt", "w", encoding="utf-8") as f:
+        f.write(response["choices"][0]["message"]["content"])
+    print(response["choices"][0]["message"]["content"])
+    error_classes = response["choices"][0]["message"]["content"]
     error_classes_list = re.findall(r"\d+\.\s+\*\*(.*?)\*\*", error_classes)
     print(error_classes_list)
     amount_of_errors = int(len(error_classes_list)/2)
     print(amount_of_errors)
     error_classes_list_fp = error_classes_list[-amount_of_errors:]
     error_classes_list_fn = error_classes_list[:amount_of_errors]
-    print(error_classes_list_fn,"\n", error_classes_list_fp)
 
     false_positive_dic = {error: 0 for error in error_classes_list_fp}
     false_negative_dic = {error: 0 for error in error_classes_list_fn}

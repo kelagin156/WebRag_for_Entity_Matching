@@ -4,7 +4,6 @@ import pandas as pd
 import time
 from openai.error import APIError, Timeout, RateLimitError, ServiceUnavailableError
 from sklearn.metrics import f1_score
-from datetime import datetime
 
 # Due to the travily and chat gpt needing 
 
