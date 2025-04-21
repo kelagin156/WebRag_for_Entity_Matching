@@ -40,6 +40,7 @@ def generate_classification_prompt(example, error_classes, retries=3, delay=5):
         "of every decision as a list first. Finally, also provide a confidence score for each classification "
         "adhering to the JSON format of the following example:\n\n"
         '{"2":"90","4":"30","5":"75"}\n\n'
+        "Please make sure that you return a json and the key in the json matches the ID of the Error!"
         f"Error classes:\n {error_classes} \n" 
     )
 
@@ -67,12 +68,10 @@ def generate_classification_prompt(example, error_classes, retries=3, delay=5):
             if attempt < retries:
                 time.sleep(delay)
             else:
-                print("❌ All retries failed. Exiting.")
+                print(" All retries failed. Exiting.")
                 raise e  
 
-
-if __name__ == "__main__":
-    
+def save_errors():
     # Load your results CSV
     df = pd.read_csv("entity_matching_results_400.csv")
 
@@ -121,6 +120,10 @@ if __name__ == "__main__":
 
     print(f"Saved {len(all_errors)} structured error cases to {OUTPUT_FILE}")
 
+if __name__ == "__main__":
+    
+    save_errors()
+
     with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
         errors = json.load(f)
 
@@ -151,33 +154,28 @@ if __name__ == "__main__":
     prompt += "\n\n"
     prompt += format_block("False Positives", false_positives)
 
-    # Output to file for pasting into ChatGPT or Claude etc.
-    #with open("gpt_error_class_prompt.txt", "w", encoding="utf-8") as f:
-    #    f.write(prompt)
+    with open("gpt_error_class_prompt.txt", "w", encoding="utf-8") as f:
+        f.write(prompt)
 
-    #openai.api_key = "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"
-    #response = openai.ChatCompletion.create(
-    #    model="gpt-4.1-mini",  
-    #    messages=[{"role": "user", "content": prompt}]
-    #)
+    openai.api_key = "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"
+    response = openai.ChatCompletion.create(
+        model="gpt-4.1-mini",  
+        messages=[{"role": "user", "content": prompt}]
+    )
 
     # Output the GPT response
     print("\n--- GPT-Generated Error Classes ---\n")
-    #with open("gpt_error_class_output.txt", "w", encoding="utf-8") as f:
-    #    f.write(response["choices"][0]["message"]["content"])
-    #print(response["choices"][0]["message"]["content"])
-    ##delete this
-    with open("gpt_error_class_output.txt", "r", encoding="utf-8") as f:
-        error_classes = f.read()
-    ##
-    #error_classes = response["choices"][0]["message"]["content"]
+    with open("gpt_error_class_output.txt", "w", encoding="utf-8") as f:
+        f.write(response["choices"][0]["message"]["content"])
+    print(response["choices"][0]["message"]["content"])
+
+    error_classes = response["choices"][0]["message"]["content"]
     error_classes_list = re.findall(r"\d+\.\s+\*\*(.*?)\*\*", error_classes)
-    print(error_classes_list)
+
     amount_of_errors = int(len(error_classes_list)/2)
-    print(amount_of_errors)
+
     error_classes_list_fp = error_classes_list[-amount_of_errors:]
     error_classes_list_fn = error_classes_list[:amount_of_errors]
-    print(error_classes_list_fn,"\n", error_classes_list_fp)
 
     false_positive_dic = {error: 0 for error in error_classes_list_fp}
     false_negative_dic = {error: 0 for error in error_classes_list_fn}
@@ -185,46 +183,49 @@ if __name__ == "__main__":
     with open(OUTPUT_FILE, "r", encoding="utf-8") as file:
         data = json.load(file)
         for i, record in enumerate(data):
-            if record["label_type"] == "False Positive":
-                response = generate_classification_prompt(record, error_classes_list_fp)
-            if record["label_type"] == "False Negative":
-                response = generate_classification_prompt(record, error_classes_list_fn)
-            match = re.search(r"\{.*?\}", response, re.DOTALL)
-            if match:
-                json_str = match.group(0)
-                # Remove JavaScript-style comments (//...)
-                cleaned_str = re.sub(r"//.*?$", "", json_str, flags=re.MULTILINE)
-
+            if i >= 0:
                 try:
-                    score_dict = json.loads(cleaned_str)
-                except json.JSONDecodeError:
-                    try:
-                        # As fallback, use ast.literal_eval (safe eval of Python dict-like string)
-                        score_dict = ast.literal_eval(cleaned_str)
-                    except Exception as e:
-                        print(f"Failed to parse JSON: {e}")
-                        score_dict = {}
+                    if record["label_type"] == "False Positive":
+                        response = generate_classification_prompt(record, error_classes_list_fp)
+                    if record["label_type"] == "False Negative":
+                        response = generate_classification_prompt(record, error_classes_list_fn)
+                    match = re.search(r"\{.*?\}", response, re.DOTALL)
+                    if match:
+                        json_str = match.group(0)
+                        # Remove JavaScript-style comments (//...)
+                        cleaned_str = re.sub(r"//.*?$", "", json_str, flags=re.MULTILINE)
 
-                # Step 3: Loop through and update based on score threshold
-                for key, value in score_dict.items():
-                    index = int(re.match(r"(\d+)", key).group(0))-1
-                    score = int(re.match(r"(\d+)", value).group(0))
-                    if int(value) > 0:
-                        if record["label_type"] == "False Positive":
-                            if index < len(error_classes_list_fp):  # Check index bounds
-                                class_name_fp = error_classes_list_fp[index]
-                                false_positive_dic[class_name_fp] += 1
+                        try:
+                            score_dict = json.loads(cleaned_str)
+                        except json.JSONDecodeError:
+                            try:
+                                # As fallback, use ast.literal_eval (safe eval of Python dict-like string)
+                                score_dict = ast.literal_eval(cleaned_str)
+                            except Exception as e:
+                                print(f"Failed to parse JSON: {e}")
+                                score_dict = {}
 
-                        if record["label_type"] == "False Negative":
-                            if index < len(error_classes_list_fn):  # Check index bounds
-                                class_name_fn = error_classes_list_fn[index]
-                                false_negative_dic[class_name_fn] += 1
+                        # Step 3: Loop through and update based on score threshold
+                        for key, value in score_dict.items():
+                            index = int(re.match(r"(\d+)", key).group(0))-1
+                            score = int(re.match(r"(\d+)", value).group(0))
+                            if int(value) > 0:
+                                if record["label_type"] == "False Positive":
+                                    if index < len(error_classes_list_fp):  # Check index bounds
+                                        class_name_fp = error_classes_list_fp[index]
+                                        false_positive_dic[class_name_fp] += 1
 
-                #print("False Positives:", false_positive_dic)
-                #print("False Negatives:", false_negative_dic)
-            else:
-                print("No JSON found in string.")
-        
+                                if record["label_type"] == "False Negative":
+                                    if index < len(error_classes_list_fn):  # Check index bounds
+                                        class_name_fn = error_classes_list_fn[index]
+                                        false_negative_dic[class_name_fn] += 1
+
+                        print("False Positives:", false_positive_dic)
+                        print("False Negatives:", false_negative_dic)
+                except Exception as e:
+                    print(f"Script interrupted at i = ", i)
+                    print(false_positive_dic)
+                    print(false_negative_dic)
             
             with open("error_to_errorClasses.txt", "a", encoding="utf-8") as file:
                 file.write("For record: ")

@@ -25,40 +25,6 @@ print("\n=== Konfusionsmatrix (WebRAG n=5) ===")
 cm = confusion_matrix(df["y_true"], df["WebRag_y_pred_n5"])
 print(cm)
 
-# 2. FEHLERANALYSE
-def classify_error(row):
-    if row["y_true"] == 1 and row["WebRag_y_pred_n5"] == 0:
-        return "False Negative"
-    elif row["y_true"] == 0 and row["WebRag_y_pred_n5"] == 1:
-        return "False Positive"
-    else:
-        return "Correct"
-
-df["Error_Type"] = df.apply(classify_error, axis=1)
-
-def error_category(row):
-    left = row["Entity1"].lower()
-    right = row["Entity2"].lower()
-    if "watch" in left or "watch" in right:
-        return "Fashion/Accessories"
-    elif "printer" in left or "toner" in left or "laser" in left:
-        return "Office Supplies"
-    elif "camera" in left or "lens" in left or "dslr" in left:
-        return "Photography"
-    elif "bag" in left or "backpack" in left or "sling" in left:
-        return "Bags"
-    elif "bike" in left or "bicycle" in left or "tube" in left:
-        return "Cycling/Outdoor"
-    elif len(left) < 100 or len(right) < 100:
-        return "Sparse Info"
-    else:
-        return "Other/General"
-
-df["Error_Category"] = df[df["Error_Type"] != "Correct"].apply(error_category, axis=1)
-error_summary = df[df["Error_Type"] != "Correct"].groupby(["Error_Type", "Error_Category"]).size().unstack(fill_value=0)
-print("\n=== Fehlerklassifikation ===")
-print(error_summary)
-
 # 3. KOSTENANALYSE
 print("\n=== Kostenanalyse (Tokenverbrauch pro n) ===")
 cost_df = pd.DataFrame({
