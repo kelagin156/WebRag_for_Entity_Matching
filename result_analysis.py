@@ -51,7 +51,7 @@ TRAVILY_COST_PER_SAMPLE = TRAVILY_CREDIT_COST * TRAVILY_CREDITS_PER_SAMPLE
 # Cost calculation per sample
 def calculate_total_cost(input_tokens, output_tokens):
     gpt_cost = (input_tokens / 1000) * GPT_INPUT_COST + (output_tokens / 1000) * GPT_OUTPUT_COST
-    travily_cost = TRAVILY_COST_PER_SAMPLE
+    travily_cost = 400* TRAVILY_COST_PER_SAMPLE
     return gpt_cost, travily_cost
 
 # Baseline
@@ -108,19 +108,6 @@ cost_summary = pd.DataFrame({
 print("\n Cost Analysis (GPT-4o mini + estimated Travily costs):")
 print(cost_summary)
 
-# F1 vs Cost analysis
-
-# GPT-4o mini pricing
-GPT_INPUT_COST = 0.0005
-GPT_OUTPUT_COST = 0.0015
-
-# Travily credit pricing (assumed from Bootstrap Plan)
-TRAVILY_CREDIT_COST = 0.0067
-
-# Assumption: 2 searches + up to 10 extracts per sample = 4 credits
-TRAVILY_CREDITS_PER_SAMPLE = 2
-TRAVILY_COST_PER_SAMPLE = TRAVILY_CREDIT_COST * TRAVILY_CREDITS_PER_SAMPLE
-
 # F1 scores
 f1_n = {
     1: f1_score(df["y_true"], df["WebRag_y_pred_n1"]),
@@ -135,7 +122,7 @@ for n in [1, 3, 5]:
     output_tokens = df[f"WebRAG_{n}_GPT_Output_Tokens"]
 
     gpt_cost = (input_tokens / 1000) * GPT_INPUT_COST + (output_tokens / 1000) * GPT_OUTPUT_COST
-    total_cost = gpt_cost.mean() + TRAVILY_COST_PER_SAMPLE
+    total_cost = gpt_cost.mean() + 400 * TRAVILY_COST_PER_SAMPLE
 
     cost_data[n] = {
         "avg_input_tokens": input_tokens.mean(),
@@ -143,12 +130,14 @@ for n in [1, 3, 5]:
         "f1": f1_n[n]
     }
 
-# Comparison: n=1 → n=3 and n=3 → n=5
+print(pd.DataFrame(cost_data))
+# Calculate cost per F1 point
 def cost_delta(n):
     extra_f1 = cost_data[n]["f1"] - f1_score(df["y_true"], df["ChatGPT40-mini_baseline_y_pred"])
     cost = cost_data[n]["total_cost_with_travily"] - df["Total_Cost_GPT_USD_baseline"].mean()
+    
     return {
-        "Cost per F1 Point": cost/ extra_f1,
+        "Cost per F1 Point": cost/ (extra_f1*100),
 
     }
 

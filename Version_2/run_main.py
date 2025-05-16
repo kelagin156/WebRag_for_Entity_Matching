@@ -168,7 +168,7 @@ def process_record(record):
 # Example usage
 if __name__ == "__main__":
     API_key = "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"
-    TRAVILY_key = "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"
+    TRAVILY_key = "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"
     file_path = "final400datasets.json"
     matcher = WebRAGEntityMatcher(openai_api_key=API_key, travily_api_key=TRAVILY_key)    
 
@@ -178,7 +178,7 @@ if __name__ == "__main__":
         data = json.load(file)
         try:
             for i, record in enumerate(data):
-                if i >= 0: # in case the code fails the number can be adjusted to the last i
+                if i >= 265: # in case the code fails the number can be adjusted to the last i
                     entity_1, entity_2, label, title1, title2 = process_record(record)
 
                     baseline_result, base_response, base_prompt, base_in_tokens, base_out_tokens = matcher.llm_entity_match(entity_1, entity_2)
