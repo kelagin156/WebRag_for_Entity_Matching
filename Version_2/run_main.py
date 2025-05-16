@@ -233,11 +233,11 @@ if __name__ == "__main__":
         finally:
             # Save whatever has been collected so far
             df = pd.DataFrame(rows)
-            df.to_csv("entity_matching_results_400.csv", index=False, encoding="utf-8",  mode="a", header=not pd.io.common.file_exists("entity_matching_results_400.csv"))
+            df.to_csv("entity_matching_results_400_version2.csv", index=False, encoding="utf-8",  mode="a", header=not pd.io.common.file_exists("entity_matching_results_400.csv"))
             print(f"\n✅ Saved {len(df)} results to entity_matching_results_400.csv (partial or full)")
             print(f"the las item was {i}")
             
-            df_all = pd.read_csv("entity_matching_results_400.csv")
+            df_all = pd.read_csv("entity_matching_results_400_version2.csv")
             
             baseline_f1 = f1_score(df_all["y_true"], df_all["ChatGPT40-mini_baseline_y_pred"])
             webrag_f1_n1 = f1_score(df_all["y_true"], df_all["WebRag_y_pred_n1"])
