@@ -4,11 +4,10 @@ import json
 import pandas as pd
 import re
 import ast
-import random
 from openai.error import APIError, Timeout, RateLimitError, ServiceUnavailableError
 
 
-RESULTS_FILE = "entity_matching_results_400.csv"
+RESULTS_FILE = "entity_matching_results_400_version2.csv"
 OUTPUT_FILE = "error_analysis_structured_full.json"
 
 # === EXTRACT STRUCTURED ERROR DATA ===
@@ -73,7 +72,7 @@ def generate_classification_prompt(example, error_classes, retries=3, delay=5):
 
 def save_errors():
     # Load your results CSV
-    df = pd.read_csv("entity_matching_results_400.csv")
+    df = pd.read_csv("entity_matching_results_400_version2.csv")
 
     # Get row indices for False Positives: predicted match but actually non-match
     false_positives1 = df[(df["WebRag_y_pred_n1"] == 1) & (df["y_true"] == 0)].index.tolist()
@@ -173,6 +172,8 @@ if __name__ == "__main__":
     error_classes_list = re.findall(r"\d+\.\s+\*\*(.*?)\*\*", error_classes)
 
     amount_of_errors = int(len(error_classes_list)/2)
+    print(f"Amount of errors: {amount_of_errors}")
+    print(f"Error classes list: {error_classes_list}")
 
     error_classes_list_fp = error_classes_list[-amount_of_errors:]
     error_classes_list_fn = error_classes_list[:amount_of_errors]
