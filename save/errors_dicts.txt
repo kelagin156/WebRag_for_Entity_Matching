@@ -1,2 +1,0 @@
-False Positives: {'Title and Details Overlap': 44, 'Promotional or Marketing Language': 25, 'Common Part Names': 38, 'Same Product with Different Color or Packaging': 27, 'Multiple Listings of the Same Product': 32, 'Similarity in Features but Different Models': 14}
-False Negatives: {'Brand and Model Similarity Confusion': 41, 'Feature Misalignment': 35, 'Misleading Descriptions': 41, 'Identical Products in Different Markets': 18, 'Minor Variations Ignored': 26, 'Quality and Version Differences': 23}

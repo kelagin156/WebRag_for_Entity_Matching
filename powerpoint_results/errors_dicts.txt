@@ -1,2 +1,0 @@
-False Positives: {'High Similarity with Distinct Variants': 42, 'Overlapping Features without Core Identity': 28, 'Title Confusion': 44, 'Ambiguity in Descriptions': 40, 'Identifier or Code Conflicts': 24, 'Misinterpretation of Attributes': 32}
-False Negatives: {'Title Mismatch': 43, 'Brand Inconsistency': 7, 'Descriptive Overlap': 43, 'Misleading Attributes': 14, 'Market Variability': 38, 'Similar Product Types': 41}

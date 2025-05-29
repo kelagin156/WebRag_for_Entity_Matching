@@ -5,8 +5,7 @@ import time
 from openai.error import APIError, Timeout, RateLimitError, ServiceUnavailableError
 from sklearn.metrics import f1_score
 
-# Due to the travily and chat gpt needing 
-
+# Process record GPT prompt
 def process_record(record):
     """Extracts fields, processes them, and returns modified left and right texts."""
 
@@ -38,6 +37,7 @@ def process_record(record):
 
     return left_text, right_text, label
 
+# Function to call OpenAI API for entity matching
 def llm_entity_match(openai_api_key, entity_1, entity_2):
     openai.api_key = openai_api_key
     prompt = f"Do these two entities refer to the same real-world object? Entity 1: [{entity_1}], Entity 2: [{entity_2}]. Respond only with 'Yes' or 'No' and the percentage of how certain you are about your answer. No more information"
@@ -47,6 +47,7 @@ def llm_entity_match(openai_api_key, entity_1, entity_2):
     )
     return response["choices"][0]["message"]["content"].strip()
 
+# Function to safely call the LLM with retries
 def safe_llm_entity_match(api_key, entity_1, entity_2, retries=3, delay=5):
     for attempt in range(1, retries + 1):
         try:
@@ -56,8 +57,10 @@ def safe_llm_entity_match(api_key, entity_1, entity_2, retries=3, delay=5):
             if attempt < retries:
                 time.sleep(delay)
             else:
-                print("❌ All retries failed. Exiting.")
+                print(" All retries failed. Exiting.")
                 raise e  # or handle how you'd like
+
+# Run ChatGPT on the Full WDC 80% dataset
 def test_llm_what_the_llm_knows():
     API_key = "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"
     file_path = "80pair\wdcproducts80cc20rnd100un_gs.json"
@@ -67,7 +70,7 @@ def test_llm_what_the_llm_knows():
     try:
         with open(file_path, "r", encoding="utf-8") as file:
             for i,line in enumerate(file):
-                if i >= 601: # in case the code fails the number can be adjusted to the last i
+                if i >= 0: # in case the code fails the number can be adjusted to the last i
                     record = json.loads(line)  # Load each JSON object separately
                     entity_1, entity_2, label = process_record(record)  # Process data
                     
@@ -90,16 +93,18 @@ def test_llm_what_the_llm_knows():
 
                     print("Index:", i, " Answer: ", answer, " Label:", label, "Match:", match, " Non-matches: ", non_match)
     except Exception as e:
-        print(f"\n❗ Script interrupted due to error:\n{e}\n")
+        print(f"\n Script interrupted due to error:\n{e}\n")
 
     finally:
         # Save whatever has been collected so far
         df = pd.DataFrame(rows)
+        # Safe results to CSV
         df.to_csv("dataset_selection_results.csv", index=False, encoding="utf-8",  mode="a", header=not pd.io.common.file_exists("dataset_selection_results.csv"))
-        print(f"\n✅ Saved {len(df)} results to dataset_selection_results.csv (partial or full)")
+        print(f"\n Saved {len(df)} results to dataset_selection_results.csv (partial or full)")
         print(f"the las item was {i}")
         print((df["Match"] == 0).sum())
 
+#Select the items that ChatGPT was not able to match and fill out with correct ones 
 def select_dataset():
     # Read the CSV
     df = pd.read_csv("dataset_selection_results.csv")
@@ -107,18 +112,18 @@ def select_dataset():
     match_0_df = df[df["Match"] == 0].sample(n=168, random_state=42)
     match_0_indices = match_0_df.index.tolist()
 
-    # Count labels in Match == 0
+    # Count labels in Match == 0 - the ones that ChatGPT was not able to match
     label_0_count = (match_0_df["Label"] == 0).sum()
     label_1_count = (match_0_df["Label"] == 1).sum()
 
-    # Calculate how many more we need from Match == 1
+    # Calculate how many more we need to reach 400 total samples
     total_needed_label_0 = int(0.82 * 400)  # 88% of 500 = 440
     total_needed_label_1 = int(0.18 * 400)  # 12% of 500 = 60
 
+    # Calculate how many more we need for each label
     needed_label_0_from_match_1 = total_needed_label_0 - label_0_count
     needed_label_1_from_match_1 = total_needed_label_1 - label_1_count
 
-    print(needed_label_0_from_match_1,needed_label_1_from_match_1 )
     # Get Match == 1 indices
     match_1_df = df[df["Match"] == 1]
     match_1_label_0_indices = match_1_df[match_1_df["Label"] == 0].sample(n=needed_label_0_from_match_1, random_state=42).index.tolist()
@@ -144,6 +149,7 @@ def select_dataset():
     with open(output_json_file, "w", encoding="utf-8") as outfile:
         json.dump(selected_jsons, outfile, indent=4)  # Pretty-print JSON
 
+#Print f1 score and number of non-matches
 def print_f1():
     df = pd.read_csv("dataset_selection_results.csv")
     df["Answer_binary"] = df["Answer"].apply(lambda x: 1 if "Yes" in str(x) else 0)
@@ -153,6 +159,7 @@ def print_f1():
     count_non_matcn = (df["Match"] == 0).sum()
     print(count_non_matcn)
 
+# Main execution
 if __name__ == "__main__":
     test_llm_what_the_llm_knows()
     select_dataset()

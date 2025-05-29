@@ -1,0 +1,127 @@
+Below is a hypothesized set of **error classes** for the product matching classification system based on the analysis of the given false negatives and false positives. These error classes capture common underlying reasons why the system fails in these examples, separately for false negatives and false positives.
+
+---
+
+## False Negatives (Missed Matches)
+
+These are cases where the system **failed to match pairs that should be matched**.
+
+### Error Classes for False Negatives
+
+1. **Brand Variant or Missing Brand Normalization**  
+   - Brand names are written differently or missing in one entity (e.g., "TAG HEUER" vs. "Tag Heuer", "Skouts Honor" vs. "SKOUTS HONOR")  
+   - Case differences, punctuation, or slight abbreviation mismatches in brands cause missed matches.
+
+2. **Partial or Inconsistent Product Titles / Descriptions**  
+   - Titles have significantly different phrasing or truncations (e.g., acronyms, abbreviations, missing spec details).  
+   - Product descriptions differ in detail level or format, causing the system to underestimate similarity.
+
+3. **Price Unit / Currency or Formatting Differences**  
+   - Prices are given in different currencies with inconsistent conversions or missing/incorrect price values (e.g., price = -1.0 USD).  
+   - Large price differences or missing price data cause the system to hesitate or discount match likelihood.
+
+4. **Replica vs Authentic vs Similar Models Confusion**  
+   - Genuine products paired against replica/fake versions (e.g., Omega Seamaster vs AAA Replica) confuse the model.  
+   - The system may avoid matching assuming different authenticity or quality.
+
+5. **Product Variants or Subtypes Not Recognized as Same**  
+   - Different variations or editions of the “same” product model (e.g., color variants, sizes, included accessories) not recognized as matches.  
+   - Differentiations in included components or versions (e.g., pump with different chuck styles).
+
+6. **Missing or Mismatched Technical Specifications**  
+   - Specs like size, capacity, wattage, or product feature details differ slightly or are missing, causing match rejection.  
+   - Different expressions for the same specs (e.g., “2666MHz” vs “DDR4-2666MHz”).
+
+7. **Unbalanced or Asymmetric Information Distribution**  
+   - One entity has rich descriptive metadata; the other has minimal or different format descriptions; this asymmetry reduces similarity scores.
+
+8. **Product Category or Type Overlap but Not Same Product**  
+   - Products closely related by category but not identical (e.g., battery vs battery charger, or shampoo vs shampoo set).  
+   - System fails to differentiate accessories or complementary items from identical products.
+
+9. **Name Ambiguity and Typos in Text**  
+   - Presence of typos, abbreviations, or informal shorthand reduces textual similarity (e.g., "Skout D Shmpo Cond", "Ray Ban N a 4184").
+
+10. **Mismatched Unit or Dimension Expressions**  
+    - Different ways to express units/dimensions confuse (e.g., “30" vs 30 inch, metric vs imperial units).
+
+---
+
+## False Positives (Wrong Matches)
+
+These are cases where the system **erroneously matched pairs that should not be matched**.
+
+### Error Classes for False Positives
+
+1. **Highly Similar or Overlapping Product Names / Colors / Variants**  
+   - Products with very similar model names, colors, or features but different specifications or versions matched incorrectly (e.g., minor differences in product names or color variants).
+
+2. **Same Brand with Similar Product Lines**  
+   - Different products from the same brand with overlapping keywords matched as same (e.g., different Shimano brakes or Tissot watches with close model codes).
+
+3. **Generic Descriptions or Shared Keywords**  
+   - Generic product titles and overlapping descriptive terms lead to false matches (e.g., generic “12 GAUGE WINCHESTER SHOT” ammunition vs similar ammo types).
+
+4. **Accessories or Complementary Products Confused as Identical**  
+   - Related but distinct items mistaken as same product (e.g., battery vs charger, or a camera sling vs camera bag variant).
+
+5. **Package Size or Quantity Confusion**  
+   - Different package sizes or quantities of the same product name matched as identical (e.g., 25 rounds vs 250 rounds ammunition, or 2TB hard drives with different packaging).
+
+6. **Model Number or SKU Variation Misinterpreted**  
+   - Slight differences in model numbers or SKU codes overlooked, causing mistaken matches.
+
+7. **Similar Images or Brand Approximations**  
+   - Products with similar brand names differing by small capitalization, slight spelling differences, or recognized as sub-brands (e.g., “Ubiquiti” vs “UbiQuiti”).
+
+8. **Regional Variants or Different Market Versions**  
+   - Products targeted for different regions/locales but effectively same items classified as matches (e.g., Samsung Galaxy A51 black vs prism white, or EU vs DE market versions).
+
+9. **Reordered or Slightly Different Phrasing in Titles**  
+   - Title word order or rearrangement does not affect classification, leading to positives that may be borderline.
+
+10. **Price and Currency Discrepancies Ignored**  
+    - Pricing differences ignored or deemed non-conclusive, causing different products at different price points to be matched.
+
+---
+
+# Summary Table
+
+| Error Class ID | False Negatives                                                        | False Positives                                                          |
+|----------------|----------------------------------------------------------------------|-------------------------------------------------------------------------|
+| 1              | Brand name variants and inconsistencies                              | Highly similar brand products with minor differences                    |
+| 2              | Title/description phrasing differences                               | Generic or overlapping keywords leading to confusion                    |
+| 3              | Price/currency mismatch or missing/invalid price                     | Different package sizes or quantities treated as same                   |
+| 4              | Replica vs authentic product confusion                               | Product accessories or complementary items mistaken as identical       |
+| 5              | Product variant or edition differences not handled                   | Model number/SKU variation ignored or overlooked                        |
+| 6              | Missing or differently formatted technical specs                     | Regional variants or different market versions matched incorrectly      |
+| 7              | Asymmetric product metadata richness                                | Title word order or rephrasing considered identical                     |
+| 8              | Close but different product category confused as same                | Price differences mostly ignored                                       |
+| 9              | Typos, abbreviations, and informal text                             | Similar brand names with small spelling/capitalization differences      |
+| 10             | Unit or dimension expression inconsistency                          | —                                                                       |
+
+---
+
+# Additional Notes
+
+- Many false negatives involve **insufficient normalization of brands, units, price, and variant specs**, causing the model to miss matches.
+
+- Many false positives arise from word overlap in long titles and shared brand names where products are **related but not identical**, and the model treats these as same.
+
+- Genuine vs replica confusion is a challenging category causing false negatives.
+
+- Handling multi-currency price conversions and normalization could reduce false negatives.
+
+- Improving disambiguation between product variants and accessories would reduce false positives.
+
+---
+
+This categorization can guide improvements in:
+
+- Data normalization and enrichment (brands, specs, units, prices)  
+- Use of deeper semantic and variant-aware matching  
+- Incorporation of authenticity or replica detection  
+- Leveraging metadata fields for clearer product lineage  
+- Better treatment of complementary vs identical products  
+
+If you need me to classify specific examples into these categories or explain further, just ask!
