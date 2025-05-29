@@ -57,7 +57,7 @@ def generate_classification_prompt(example, error_classes, retries=3, delay=5):
     # Retry logic for OpenAI API calls in case it fails
     for attempt in range(1, retries + 1):
         try:
-            openai.api_key = "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"
+            openai.api_key = "YOUR API KEY HERE"  # TODO: Replace with your OpenAI API key
             response = openai.ChatCompletion.create(
                 model="gpt-4o",  
                 messages=[{"role": "user", "content": prompt}]
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     with open("gpt_error_class_prompt.txt", "w", encoding="utf-8") as f:
         f.write(prompt)
 
-    openai.api_key = "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"
+    openai.api_key = "YOUR API KEY HERE"  # TODO: Replace with your OpenAI API key
     response = openai.ChatCompletion.create(
         model="gpt-4.1-mini",  
         messages=[{"role": "user", "content": prompt}]

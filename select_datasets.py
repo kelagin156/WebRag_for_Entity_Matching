@@ -62,7 +62,7 @@ def safe_llm_entity_match(api_key, entity_1, entity_2, retries=3, delay=5):
 
 # Run ChatGPT on the Full WDC 80% dataset
 def test_llm_what_the_llm_knows():
-    API_key = "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"
+    API_key = "YOUR API KEY HERE"  # TODO: Replace with your OpenAI API key 
     file_path = "80pair\wdcproducts80cc20rnd100un_gs.json"
     
     rows = []

@@ -157,8 +157,8 @@ def process_record(record):
 
 # Main execution block
 if __name__ == "__main__":
-    API_key = "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"
-    TAVILY_key = "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"
+    API_key ="YOUR API KEY HERE"  # TODO: Replace with your OpenAI API key 
+    TAVILY_key = "YOUR API KEY HERE"  # TODO: Replace with your Tavily API key 
     file_path = "final400datasets.json"
     matcher = WebRAGEntityMatcher(openai_api_key=API_key, tavily_api_key=TAVILY_key)    
 
