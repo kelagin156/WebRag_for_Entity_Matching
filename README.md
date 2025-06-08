@@ -14,7 +14,7 @@ Experiments are conducted on a 400-sample subset of the WDC Products dataset, fo
 
 - `/Appended WebRAG/`: Code and results for the configuration where web content is appended at the end of the prompt.
 - `/Embedded WebRAG/`: Code and results where retrieved context is embedded with according entity.
-- `/80pair/`: [WDC Dataset of 80% corner cases] (https://webdatacommons.org/largescaleproductcorpus/wdc-products/#toc5)
+- `/80pair/`: Based on [WDC Dataset of 80% corner cases](https://webdatacommons.org/largescaleproductcorpus/wdc-products/#toc5)
 - `run_main.py`: Main script to run WebRAG + GPT baseline evaluation for each WebRAG configuration type
 - `select_datasets.py`: Utility for downsampling and selecting challenging cases.
 - `final400datasets.json`: Input dataset of 400 entity pairs.
